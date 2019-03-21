@@ -4,6 +4,7 @@ lint:
 	flake8 skconfig tests
 
 dev:
+	pip install numpy
 	pip install -e .[dev]
 
 release:

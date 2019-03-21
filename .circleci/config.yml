@@ -13,6 +13,7 @@ test_py: &test_py
         command: |
           python -m venv venv
           . venv/bin/activate
+          pip install numpy
           pip install -e .[dev]
     - save_cache:
         key: >
