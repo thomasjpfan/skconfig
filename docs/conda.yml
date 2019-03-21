@@ -1,0 +1,9 @@
+name: skconfig_docs
+
+dependencies:
+  - python=3.6.*
+  - scikit-learn=0.20.3
+  - sphinx
+  - sphinx_rtd_theme
+  - pip:
+      - configspace==0.4.9

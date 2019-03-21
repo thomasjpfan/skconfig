@@ -1,0 +1,81 @@
+test_py: &test_py
+  docker:
+    - image: circleci/python:$PY_VERSION
+  steps:
+    - checkout
+    - restore_cache:
+        key: >
+          v1-dependency-cache
+          -{{ checksum "requirements/base.txt" }}
+          -{{ checksum "requirements/dev.txt" }}
+    - run:
+        name: Install dependencies
+        command: |
+          python -m venv venv
+          . venv/bin/activate
+          pip install -e .[dev]
+    - save_cache:
+        key: >
+          v1-dependency-cache
+          -{{ checksum "requirements/base.txt" }}
+          -{{ checksum "requirements/dev.txt" }}
+        paths:
+          - "venv"
+    - run:
+        name: Run tests
+        command: |
+          . venv/bin/activate
+          make lint
+          pytest
+    - run:
+        name: Report converage
+        command: |
+          if [ "${PY_VERSION}" == "3.6" ]; then
+            . venv/bin/activate
+            codecov
+          fi
+
+version: 2
+jobs:
+  test_py36:
+    environment:
+      - PY_VERSION: 3.6
+    <<: *test_py
+  deploy:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Check git tag and version are the same
+          command: |
+            VERSION=$(cat VERSION)
+            [ "$VERSION" = "$CIRCLE_TAG" ]
+      - run:
+          name: Init .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run:
+          name: Create packages
+          command: make release
+      - run:
+          name: Upload to pypi
+          command: |
+            . venv/bin/activate
+            twine upload dist/*
+
+workflows:
+  version: 2
+  buildall:
+    jobs:
+      - test_py36
+      - deploy:
+          requires:
+            - test_py36
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/

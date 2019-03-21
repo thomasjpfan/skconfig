@@ -1,0 +1,2 @@
+scikit-learn==0.20.3
+configspace==0.4.9
