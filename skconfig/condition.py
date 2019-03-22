@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from .exceptions import SKConfigValueError
 
 
 class Condition(metaclass=ABCMeta):
@@ -10,41 +11,6 @@ class Condition(metaclass=ABCMeta):
     @abstractmethod
     def is_active(self, **kwargs):
         ...
-
-    def __and__(self, other):
-        conditions = []
-        if isinstance(self, AndCondition):
-            conditions.extend(self.conditions)
-        else:
-            conditions.append(self)
-
-        if isinstance(other, AndCondition):
-            conditions.extend(other.conditions)
-        else:
-            conditions.append(other)
-
-        name = {c.child for c in conditions}
-        if len(name) != 1:
-            raise ValueError("multiple names given: {}".format(name))
-
-        return AndCondition(name.pop(), *conditions)
-
-    def __or__(self, other):
-        conditions = []
-        if isinstance(self, OrCondition):
-            conditions.extend(self.conditions)
-        else:
-            conditions.append(self)
-
-        if isinstance(other, OrCondition):
-            conditions.extend(other.conditions)
-        else:
-            conditions.append(other)
-        name = {c.child for c in conditions}
-        if len(name) != 1:
-            raise ValueError("multiple names given: {}".format(name))
-
-        return OrCondition(name.pop(), *conditions)
 
 
 class EqualsCondition(Condition):
@@ -103,8 +69,11 @@ class InCondition(Condition):
 
 
 class AndCondition(Condition):
-    def __init__(self, child, *conditions):
-        self.child = child
+    def __init__(self, *conditions):
+        name = {c.child for c in conditions}
+        if len(name) != 1:
+            raise SKConfigValueError("multiple names given: {}".format(name))
+        self.child = name.pop()
         self.conditions = conditions
 
     def is_active(self, **kwargs):
@@ -118,8 +87,11 @@ class AndCondition(Condition):
 
 
 class OrCondition(Condition):
-    def __init__(self, child, *conditions):
-        self.child = child
+    def __init__(self, *conditions):
+        name = {c.child for c in conditions}
+        if len(name) != 1:
+            raise SKConfigValueError("multiple names given: {}".format(name))
+        self.child = name.pop()
         self.conditions = conditions
 
     def is_active(self, **kwargs):

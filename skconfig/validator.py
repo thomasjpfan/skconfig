@@ -1,6 +1,7 @@
 from .parameter.base import Param
 from .exceptions import InvalidParamName
 from .exceptions import InactiveConditionedValue
+from .exceptions import SKConfigValueError
 
 
 class BaseValidator:
@@ -16,7 +17,7 @@ class BaseValidator:
             if isinstance(param, Param)
         }
         if self.estimator is None:
-            raise ValueError("estimator must be defined")
+            raise SKConfigValueError("estimator must be defined")
 
     def validate_params(self, **kwargs):
         # Check kwargs get in params

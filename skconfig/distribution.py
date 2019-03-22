@@ -58,35 +58,51 @@ class UnionDist:
     def add_to_config_space(self, name, cs):
         control_name = "{}:control".format(name)
 
-        type_to_dist = self.type_to_dist(name)
-        type_names = list(type_to_dist)
+        type_name_to_dist = self.type_name_to_dist(name)
+        type_names = list(type_name_to_dist)
         control = CategoricalHyperparameter(
             name=control_name, choices=type_names, default_value=type_names[0])
 
         cs.add_hyperparameter(control)
-        for type_name, dist in type_to_dist.items():
+        for type_name, dist in type_name_to_dist.items():
             cs_hp = dist.add_to_config_space(type_name, cs)
             cs.add_condition(EqualsCondition(cs_hp, control, type_name))
 
     def post_process(self, name, config_space_dict):
-        type_to_dist = self.type_to_dist(name)
+        type_name_to_dist = self.type_name_to_dist(name)
         control_name = "{}:control".format(name)
         control_value = config_space_dict[control_name]
-        dist = type_to_dist[control_value]
+        dist = type_name_to_dist[control_value]
         dist.post_process(name, config_space_dict)
         del config_space_dict[control_name]
         del config_space_dict[control_value]
         return config_space_dict
 
-    def type_to_dist(self, name):
-        type_to_dist = {}
+    def type_name_to_dist(self, name):
+        type_name_to_dist = {}
         for dist in self.dists:
             type_name = "{}:{}".format(name, dist.dtype.__name__)
-            type_to_dist[type_name] = dist
-        return type_to_dist
+            type_name_to_dist[type_name] = dist
+        return type_name_to_dist
+
+    @property
+    def type_to_dist(self):
+        if hasattr(self, "_type_to_dist"):
+            return self._type_to_dist
+        output = {}
+        for dist in self.dists:
+            self._type_to_dist[dist.dtype] = dist
+        self._type_to_dist = output
+        return output
+
+    def in_distrubution(self, value):
+        for dist_type, dist in self.type_to_dist.items():
+            if isinstance(value, dist_type):
+                return dist.in_distrubution(value)
+        return False
 
 
-class UniformBool(BaseDistribution):
+class UniformBoolDist(BaseDistribution):
     dtype = bool
 
     def __init__(self, default=True, **kwargs):
@@ -94,17 +110,20 @@ class UniformBool(BaseDistribution):
 
     def add_to_config_space(self, name, cs):
         default_value = 'T' if self.default else 'F'
-        cs.add_hyperparameter(
-            CategoricalHyperparameter(
-                name=name, choices=['T', 'F'], default_value=default_value))
+        hp = CategoricalHyperparameter(
+            name=name, choices=['T', 'F'], default_value=default_value)
+        return hp
 
     def post_process(self, name, config_space_dict):
         value = config_space_dict[name]
         config_space_dict[name] = value == 'T'
         return config_space_dict
 
+    def in_distrubution(self, value):
+        return value in [True, False]
 
-class UniformInt(BaseDistribution):
+
+class UniformIntDist(BaseDistribution):
     dtype = int
 
     def __init__(self, lower, upper, default=None, log=False, **kwargs):
@@ -123,8 +142,11 @@ class UniformInt(BaseDistribution):
         cs.add_hyperparameter(hp)
         return hp
 
+    def in_distrubution(self, value):
+        return self.lower <= value <= self.upper
 
-class UniformFloat(BaseDistribution):
+
+class UniformFloatDist(BaseDistribution):
     dtype = float
 
     def __init__(self, lower, upper, default=None, log=False, **kwargs):
@@ -143,8 +165,11 @@ class UniformFloat(BaseDistribution):
         cs.add_hyperparameter(hp)
         return hp
 
+    def in_distrubution(self, value):
+        return self.lower <= value <= self.upper
 
-class UniformCategorical(BaseDistribution):
+
+class UniformCategoricalDist(BaseDistribution):
     dtype = str
 
     def __init__(self, choices, default=None, **kwargs):
@@ -156,6 +181,9 @@ class UniformCategorical(BaseDistribution):
             name=name, choices=self.choices, default_value=self.default)
         cs.add_hyperparameter(hp)
         return hp
+
+    def in_distrubution(self, value):
+        return value in self.choices
 
 
 class ConstantDist(BaseDistribution):
@@ -183,11 +211,14 @@ class ConstantDist(BaseDistribution):
         config_space_dict[name] = self.value
         return config_space_dict
 
+    def in_distrubution(self, value):
+        return self.value == value
+
 
 def load_dist_dict(dist_dict):
     supported_dists = [
-        UniformBool, UniformInt, UniformFloat, UniformCategorical,
-        ConstantDist, UnionDist
+        UniformBoolDist, UniformIntDist, UniformFloatDist,
+        UniformCategoricalDist, ConstantDist, UnionDist
     ]
     name_to_dist_cls = {d.__name__: d for d in supported_dists}
     dist_cls = name_to_dist_cls[dist_dict['type']]

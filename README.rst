@@ -14,6 +14,12 @@ Scikit-learn sampling and validation library. The documentation is hosted at `Re
 Features
 --------
 
+Validation
+..........
+
+.. code-block:: python
+
+
 Installation
 ------------
 

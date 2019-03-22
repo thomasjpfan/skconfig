@@ -46,7 +46,7 @@ class ForbiddenAnd(ForbiddenClause):
                 return
             try:
                 for_clauses.is_forbidden(**kwargs)
-            except ValueError:
+            except ForbiddenValue:
                 names.append(for_clauses.name)
                 values.append(for_clauses.value)
 

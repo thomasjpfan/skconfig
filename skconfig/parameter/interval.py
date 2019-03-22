@@ -16,11 +16,7 @@ class NumericalInterval(Param):
 
     def validate(self, name, value):
         if not isinstance(value, self.value_type):
-            if isinstance(self.value_type, tuple):
-                name = ",".join(v.__name__ for v in self.value_type)
-            else:
-                name = self.value_type.__name__
-            raise InvalidParamType(name, self.value_type.__name__)
+            raise InvalidParamType(name, self.type_str)
 
         if self.lower is not None:
             if self.include_lower:
@@ -53,7 +49,9 @@ class NumericalInterval(Param):
 
 class FloatInterval(NumericalInterval):
     value_type = (float, int)
+    type_str = 'float, int'
 
 
 class IntInterval(NumericalInterval):
     value_type = int
+    type_str = 'int'

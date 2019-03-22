@@ -1,4 +1,8 @@
-class InvalidParam(ValueError):
+class SKConfigValueError(ValueError):
+    pass
+
+
+class InvalidParam(SKConfigValueError):
     pass
 
 
@@ -49,12 +53,12 @@ class InvalidParamChoices(InvalidParam):
         super().__init__("{} must be one of {}".format(name, choices))
 
 
-class ForbiddenValue(ValueError):
+class ForbiddenValue(SKConfigValueError):
     def __init__(self, name, value):
         super().__init__("{} with value {} is forbidden".format(name, value))
 
 
-class InactiveConditionedValue(ValueError):
+class InactiveConditionedValue(SKConfigValueError):
     def __init__(self, name, condition):
         super().__init__("{} has an unmet condition: {}".format(
             name, condition))
