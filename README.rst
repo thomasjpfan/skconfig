@@ -125,7 +125,7 @@ which returns a list of 5 parameter dicts to be passed to `set_params`:
 Serialization
 .............
 
-The sampler can be serialized into a json:
+The sampler can be serialized into a json
 
 .. code-block: python
 
