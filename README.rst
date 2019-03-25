@@ -133,9 +133,9 @@ The sampler can be serialized into a json:
     json_serialized = json.dumps(sampler.to_dict(), indent=2)
     print(json_serialized)
 
-which outputs:
+which outputs
 
-.. code-block: python
+.. code-block: bash
 
     {
         "dual": {
@@ -194,7 +194,7 @@ which outputs:
         }
     }
 
-To load the sampler from json:
+To load the sampler from json
 
 .. code-block: python
 
