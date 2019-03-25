@@ -14,6 +14,10 @@ class ForbiddenClause(metaclass=ABCMeta):
     def __and__(self, other):
         return ForbiddenAnd([self, other])
 
+    def __repr__(self):
+        return "{self.__class__.__name__}: {self.name}, {self.value}".format(
+            self=self)
+
 
 class ForbiddenIn(ForbiddenClause):
     def is_forbidden(self, **kwargs):
@@ -54,3 +58,9 @@ class ForbiddenAnd(ForbiddenClause):
             names_str = " and ".join(names)
             values_str = " and ".join(str(v) for v in values)
             raise ForbiddenValue(names_str, values_str)
+
+    def __repr__(self):
+        names = []
+        for clause in self.forbidden_clauses:
+            names.append(str(clause))
+        return "ForbiddenAnd: ({})".format(", ".join(names))

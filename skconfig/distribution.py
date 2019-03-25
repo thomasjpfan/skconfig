@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from inspect import getfullargspec
+
 from ConfigSpace import EqualsCondition
 from ConfigSpace.hyperparameters import CategoricalHyperparameter
 from ConfigSpace.hyperparameters import UniformIntegerHyperparameter
@@ -29,11 +30,22 @@ class BaseDistribution(metaclass=ABCMeta):
         value_str = ", ".join("{}={}".format(k, v) for k, v in as_dict.items())
         return "{}({})".format(type_of_dict, value_str)
 
-    def post_process(self, name, config_space_dict):
+    def post_process(self, name, config_space_dict, value=None):
+        if value is not None:
+            config_space_dict[name] = value
         return config_space_dict
 
+    def value_to_name_value(self, name, value):
+        return (name, value)
 
-class UnionDist:
+    def child_name(self, name):
+        return name
+
+    def is_constant(self):
+        return False
+
+
+class UnionDistribution(BaseDistribution):
     def __init__(self, *dists, **kwargs):
         self.dists = list(dists)
 
@@ -73,7 +85,10 @@ class UnionDist:
         control_name = "{}:control".format(name)
         control_value = config_space_dict[control_name]
         dist = type_name_to_dist[control_value]
-        dist.post_process(name, config_space_dict)
+
+        actual_value = config_space_dict[control_value]
+        dist.post_process(name, config_space_dict, value=actual_value)
+
         del config_space_dict[control_name]
         del config_space_dict[control_value]
         return config_space_dict
@@ -89,11 +104,20 @@ class UnionDist:
     def type_to_dist(self):
         if hasattr(self, "_type_to_dist"):
             return self._type_to_dist
-        output = {}
+        self._type_to_dist = {}
         for dist in self.dists:
             self._type_to_dist[dist.dtype] = dist
-        self._type_to_dist = output
-        return output
+        return self._type_to_dist
+
+    def value_to_name_value(self, name, value):
+        for dist in self.dists:
+            if isinstance(value, dist.dtype):
+                return "{}:{}".format(name, dist.dtype.__name__), value
+        raise TypeError("Unrecognized type for name, {}, with value {}".format(
+            name, value))
+
+    def child_name(self, name):
+        return "{}:control".format(name)
 
     def in_distrubution(self, value):
         for dist_type, dist in self.type_to_dist.items():
@@ -102,7 +126,7 @@ class UnionDist:
         return False
 
 
-class UniformBoolDist(BaseDistribution):
+class UniformBoolDistribution(BaseDistribution):
     dtype = bool
 
     def __init__(self, default=True, **kwargs):
@@ -112,9 +136,10 @@ class UniformBoolDist(BaseDistribution):
         default_value = 'T' if self.default else 'F'
         hp = CategoricalHyperparameter(
             name=name, choices=['T', 'F'], default_value=default_value)
+        cs.add_hyperparameter(hp)
         return hp
 
-    def post_process(self, name, config_space_dict):
+    def post_process(self, name, config_space_dict, value=None):
         value = config_space_dict[name]
         config_space_dict[name] = value == 'T'
         return config_space_dict
@@ -122,8 +147,13 @@ class UniformBoolDist(BaseDistribution):
     def in_distrubution(self, value):
         return value in [True, False]
 
+    def value_to_name(self, name, value):
+        if value:
+            return name, 'T'
+        return name, 'F'
 
-class UniformIntDist(BaseDistribution):
+
+class UniformIntDistribution(BaseDistribution):
     dtype = int
 
     def __init__(self, lower, upper, default=None, log=False, **kwargs):
@@ -146,7 +176,7 @@ class UniformIntDist(BaseDistribution):
         return self.lower <= value <= self.upper
 
 
-class UniformFloatDist(BaseDistribution):
+class UniformFloatDistribution(BaseDistribution):
     dtype = float
 
     def __init__(self, lower, upper, default=None, log=False, **kwargs):
@@ -169,7 +199,7 @@ class UniformFloatDist(BaseDistribution):
         return self.lower <= value <= self.upper
 
 
-class UniformCategoricalDist(BaseDistribution):
+class CategoricalDistribution(BaseDistribution):
     dtype = str
 
     def __init__(self, choices, default=None, **kwargs):
@@ -186,7 +216,7 @@ class UniformCategoricalDist(BaseDistribution):
         return value in self.choices
 
 
-class ConstantDist(BaseDistribution):
+class ConstantDistribution(BaseDistribution):
     def __init__(self, value, **kwargs):
         self.value = value
         self.dtype = type(value)
@@ -207,18 +237,22 @@ class ConstantDist(BaseDistribution):
         cs.add_hyperparameter(hp)
         return hp
 
-    def post_process(self, name, config_space_dict):
+    def post_process(self, name, config_space_dict, value=None):
         config_space_dict[name] = self.value
         return config_space_dict
 
     def in_distrubution(self, value):
         return self.value == value
 
+    def is_constant(self):
+        return True
+
 
 def load_dist_dict(dist_dict):
     supported_dists = [
-        UniformBoolDist, UniformIntDist, UniformFloatDist,
-        UniformCategoricalDist, ConstantDist, UnionDist
+        UniformBoolDistribution, UniformIntDistribution,
+        UniformFloatDistribution, CategoricalDistribution,
+        ConstantDistribution, UnionDistribution
     ]
     name_to_dist_cls = {d.__name__: d for d in supported_dists}
     dist_cls = name_to_dist_cls[dist_dict['type']]

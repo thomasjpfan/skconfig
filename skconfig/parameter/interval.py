@@ -47,11 +47,11 @@ class NumericalInterval(Param):
                     include_upper=self.include_upper)
 
 
-class FloatInterval(NumericalInterval):
+class FloatIntervalParam(NumericalInterval):
     value_type = (float, int)
     type_str = 'float, int'
 
 
-class IntInterval(NumericalInterval):
+class IntIntervalParam(NumericalInterval):
     value_type = int
     type_str = 'int'

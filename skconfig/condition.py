@@ -21,7 +21,8 @@ class EqualsCondition(Condition):
         return value == self.conditioned_value
 
     def __repr__(self):
-        return "{} == {}".format(self.parent, self.conditioned_value)
+        return "Child: {} Condition: {} == {}".format(self.child, self.parent,
+                                                      self.conditioned_value)
 
 
 class NotEqualsCondition(Condition):
@@ -32,7 +33,8 @@ class NotEqualsCondition(Condition):
         return value != self.conditioned_value
 
     def __repr__(self):
-        return "{} != {}".format(self.parent, self.conditioned_value)
+        return "Child: {} Condition: {} != {}".format(self.child, self.parent,
+                                                      self.conditioned_value)
 
 
 class LessThanCondition(Condition):
@@ -43,7 +45,8 @@ class LessThanCondition(Condition):
         return value < self.conditioned_value
 
     def __repr__(self):
-        return "{} < {}".format(self.parent, self.conditioned_value)
+        return "Child: {} Condition: {} < {}".format(self.child, self.parent,
+                                                     self.conditioned_value)
 
 
 class GreaterThanCondition(Condition):
@@ -54,7 +57,8 @@ class GreaterThanCondition(Condition):
         return value > self.conditioned_value
 
     def __repr__(self):
-        return "{} > {}".format(self.parent, self.conditioned_value)
+        return "Child: {} Condition: {} > {}".format(self.child, self.parent,
+                                                     self.conditioned_value)
 
 
 class InCondition(Condition):
@@ -65,7 +69,8 @@ class InCondition(Condition):
         return value in self.conditioned_value
 
     def __repr__(self):
-        return "{} in {}".format(self.parent, self.conditioned_value)
+        return "Child: {} Condition: {} in {}".format(self.child, self.parent,
+                                                      self.conditioned_value)
 
 
 class AndCondition(Condition):
@@ -83,7 +88,7 @@ class AndCondition(Condition):
         return True
 
     def __repr__(self):
-        return " & ".join(str(c) for c in self.conditions)
+        return " & ".join("({})".format(c) for c in self.conditions)
 
 
 class OrCondition(Condition):
@@ -101,4 +106,4 @@ class OrCondition(Condition):
         return False
 
     def __repr__(self):
-        return " | ".join(str(c) for c in self.conditions)
+        return " | ".join("({})".format(c) for c in self.conditions)

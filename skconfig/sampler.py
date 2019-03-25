@@ -6,9 +6,14 @@ from .exceptions import SKConfigValueError
 from .distribution import BaseDistribution
 from .condition import AndCondition
 from .condition import OrCondition
+from .condition import InCondition
+from .condition import EqualsCondition
+from .condition import Condition
 from .forbidden import ForbiddenAnd
 from .forbidden import ForbiddenEquals
 from .forbidden import ForbiddenIn
+
+from .mapping import skconfig_obj_to_config_space
 
 
 class Sampler:
@@ -16,11 +21,11 @@ class Sampler:
         self.hps = {}
         for k, v in kwargs.items():
             if k in validator.parameters_:
-                if not isinstance(v, BaseDistribution):
+                if isinstance(v, BaseDistribution):
                     self.hps[k] = v
                 else:
-                    raise SKConfigValueError("{} is not a distribution",
-                                             format(k))
+                    raise SKConfigValueError(
+                        "{} is not a distribution".format(k))
             else:
                 raise SKConfigValueError("{} is an invalid key".format(k))
         self.validator = validator
@@ -40,7 +45,7 @@ class Sampler:
     def _generate_config_space(self):
         active_params = set(self.hps)
         active_conditions = []
-        activate_forbiddens = []
+        active_forbiddens = []
 
         # Find activate conditions
         for cond in self.validator.conditions:
@@ -56,22 +61,36 @@ class Sampler:
 
         # Find activate forbiddens
         for forb in self.validator.forbiddens:
-            if forb.name not in active_params:
-                continue
-            active_forb = self._get_active_forbidden(forb)
+            active_forb = self._get_active_forbidden(forb, active_params)
             if active_forb is None:
                 continue
-            activate_forbiddens.append(active_forb)
+            active_forbiddens.append(active_forb)
 
         # Create configuration space
-        cs = CS.ConfigurationSpace()
+        config_space = CS.ConfigurationSpace()
+        self.config_space = config_space
+
         for name in active_params:
-            self.hps[name].add_to_config_space(name, cs)
+            self.hps[name].add_to_config_space(name, config_space)
 
-        for cond in active_conditions:
-            pass
+        self.normalized_conditions = [
+            self._normalize_condition_names(cond) for cond in active_conditions
+        ]
 
-        self.config_space = cs
+        self.normalized_forbiddens = [
+            self._normalize_forbidden_names(forb) for forb in active_forbiddens
+        ]
+
+        self.cs_conditions = [
+            skconfig_obj_to_config_space(cond, config_space)
+            for cond in self.normalized_conditions
+        ]
+        self.cs_forbiddens = [
+            skconfig_obj_to_config_space(forb, config_space)
+            for forb in self.normalized_forbiddens
+        ]
+        config_space.add_conditions(self.cs_conditions)
+        config_space.add_forbidden_clauses(self.cs_forbiddens)
 
     def sample(self, size=1):
         configs = self.config_space.sample_configuration(size)
@@ -89,16 +108,17 @@ class Sampler:
         if isinstance(cond, OrCondition):
             output = []
             for inner_cond in cond.conditions:
-                active_cond = self._active_condition(inner_cond)
+                active_cond = self._get_active_condition(inner_cond)
                 if active_cond is None:
                     continue
                 output.append(active_cond)
             if not output:
                 return None
             return OrCondition(*output)
+
         if isinstance(cond, AndCondition):
             for inner_cond in cond.conditions:
-                active_cond = self._active_condition(inner_cond)
+                active_cond = self._get_active_condition(inner_cond)
                 if active_cond is None:
                     return None
             return cond
@@ -111,32 +131,99 @@ class Sampler:
         if dist.in_distrubution(conditioned_value):
             return cond
 
-    def _get_active_forbidden(self, forbidden):
+    def _get_active_forbidden(self, forbidden, active_params):
         if isinstance(forbidden, ForbiddenAnd):
+            values = []
             for forb in forbidden.forbidden_clauses:
                 name = forb.name
+                if name not in active_params:
+                    return
                 dist = self.hps[name]
-                if not dist.in_distrubution(forb.value):
-                    return None
-            return forbidden
+                active_forb = self._get_active_forbidden(forb, active_params)
+                if active_forb is None:
+                    return
+                values.append(active_forb)
+            return ForbiddenAnd(values)
         elif isinstance(forbidden, ForbiddenIn):
-            values = []
             name = forbidden.name
+            if name not in active_params:
+                return
+
+            values = []
             dist = self.hps[name]
             for value in forbidden.value:
-                if dist.in_distrubution(forbidden.value):
+                if (dist.in_distrubution(value) and not dist.is_constant()):
                     values.append(value)
             if not values:
-                return None
+                return
             return ForbiddenIn(name, values)
         elif isinstance(forbidden, ForbiddenEquals):
-            # ForbiddenEquals
             name = forbidden.name
+            if name not in active_params:
+                return
+
             dist = self.hps[name]
-            if dist.in_distrubution(forbidden.value):
+            if (dist.in_distrubution(forbidden.value)
+                    and not dist.is_constant()):
                 return forbidden
-            return None
+            return
         raise TypeError("Unrecognized type {}".format(forbidden))
 
-    def _generate_cs_condition(self, cond):
-        pass
+    def _normalize_condition_names(self, condition):
+        if isinstance(condition, (AndCondition, OrCondition)):
+            output = []
+            for cond in condition.conditions:
+                new_conditions = self._normalize_condition_names(cond)
+                output.extend(new_conditions)
+            return condition.__class__(*output)
+        elif isinstance(condition, InCondition):
+            output = []
+            for c_value in condition.conditioned_value:
+                child = condition.child
+                parent = condition.parent
+                child_dist = self.hps[child]
+                parent_dist = self.hps[parent]
+                child = child_dist.child_name(child)
+                parent, c_value = parent_dist.value_to_name_value(
+                    parent, c_value)
+                output.append(EqualsCondition(child, parent, c_value))
+            return OrCondition(*output)
+        elif isinstance(condition, Condition):
+            child = condition.child
+            parent = condition.parent
+            conditioned_value = condition.conditioned_value
+            child_dist = self.hps[child]
+            parent_dist = self.hps[parent]
+
+            child = child_dist.child_name(child)
+            parent, conditioned_value = parent_dist.value_to_name_value(
+                parent, conditioned_value)
+
+            return condition.__class__(child, parent, conditioned_value)
+        raise TypeError("Unrecognized type {}".format(condition))
+
+    def _normalize_forbidden_names(self, forbidden):
+        if isinstance(forbidden, ForbiddenAnd):
+            output = []
+            for forb in forbidden.forbidden_clauses:
+                output.append(self._normalize_forbidden_names(forb))
+            return ForbiddenAnd(output)
+        elif isinstance(forbidden, ForbiddenIn):
+            values = []
+            dist = self.hps[forbidden.name]
+            f_name = None
+            for value in forbidden.value:
+                name, value = dist.value_to_name_value(forbidden.name, value)
+                if f_name is None:
+                    f_name = name
+                elif f_name != name:
+                    raise ValueError("ForbiddenIn must be the same type: {}".
+                                     format(forbidden))
+                values.append(value)
+            return ForbiddenIn(f_name, values)
+        elif isinstance(forbidden, ForbiddenEquals):
+            dist = self.hps[forbidden.name]
+            name, value = dist.value_to_name_value(forbidden.name,
+                                                   forbidden.value)
+            return forbidden.__class__(name, value)
+        raise TypeError("Unrecognized type {}".format(forbidden))

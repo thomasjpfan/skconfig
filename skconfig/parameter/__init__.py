@@ -1,13 +1,13 @@
-from .interval import FloatInterval
-from .interval import IntInterval
+from .interval import FloatIntervalParam
+from .interval import IntIntervalParam
 from .types import BoolParam
 from .types import NoneParam
 from .types import FloatParam
 from .types import IntParam
 from .types import StringParam
-from .base import UnionParam
+from .types import UnionParam
 
 __all__ = [
-    "BoolParam", "FloatInterval", "IntInterval", "NoneParam", "FloatParam",
-    "IntParam", "StringParam", "UnionParam"
+    "BoolParam", "FloatIntervalParam", "IntIntervalParam", "NoneParam",
+    "FloatParam", "IntParam", "StringParam", "UnionParam"
 ]
