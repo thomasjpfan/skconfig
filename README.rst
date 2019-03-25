@@ -136,6 +136,7 @@ The sampler can be serialized into a json:
 which outputs:
 
 .. code-block: python
+
     {
         "dual": {
             "default": true,
