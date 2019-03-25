@@ -125,17 +125,17 @@ which returns a list of 5 parameter dicts to be passed to `set_params`:
 Serialization
 .............
 
-The sampler can be serialized into a json
+The sampler can be serialized into a json:
 
-.. code-block: python
+.. code-block:: python
 
     import json
     json_serialized = json.dumps(sampler.to_dict(), indent=2)
     print(json_serialized)
 
-which outputs
+which outputs:
 
-.. code-block: bash
+.. code-block:: python
 
     {
         "dual": {
@@ -196,7 +196,7 @@ which outputs
 
 To load the sampler from json
 
-.. code-block: python
+.. code-block:: python
 
     sampler_dict = json.loads(json_serialized)
     sampler_new = Sampler(validator).from_dict(sampler_dict)
