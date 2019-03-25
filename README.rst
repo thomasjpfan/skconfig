@@ -7,7 +7,7 @@ Features
 --------
 
 ``skconfig`` is provides two key features: Validation of parameters for
-scikit-learn models, and sampling these parameters. The sampling uses 
+scikit-learn models, and sampling these parameters. The sampling depends on 
 `ConfigSpace <https://github.com/automl/ConfigSpace>`_.
 
 Validation
@@ -53,12 +53,15 @@ With this validator object, we can validate a set of parameters:
     validator.validate_params(solver="liblinear", multi_class="multinomial")
     validator.validate_params(penalty="l1", solver="sag")
 
-Or validate a estimator
+Or validate a estimator:
 
 .. code-block:: python
 
     est = LogisticRegression(solver="liblienar")
     validator.validate_estimator(est)  # Will not raise
+
+Sampling
+........
 
 To sample the parameter space, a ``skconfig`` has a DSL for defining the 
 distribution to be sampled from: 
@@ -117,6 +120,86 @@ which returns a list of 5 parameter dicts to be passed to `set_params`:
       'penalty': 'l2',
       'solver': 'saga',
       'random_state': 7}]
+
+
+Serialization
+.............
+
+The sampler can be serialized into a json:
+
+.. code-block: python
+
+    import json
+    json_serialized = json.dumps(sampler.to_dict(), indent=2)
+    print(json_serialized)
+
+which outputs:
+
+.. code-block: json
+    {
+        "dual": {
+            "default": true,
+            "type": "UniformBoolDistribution"
+        },
+        "C": {
+            "lower": 0.0,
+            "upper": 1.0,
+            "default": 0.0,
+            "log": false,
+            "type": "UniformFloatDistribution"
+        },
+        "solver": {
+            "choices": [
+            "newton-cg",
+            "lbfgs",
+            "liblinear",
+            "sag",
+            "saga"
+            ],
+            "default": "newton-cg",
+            "type": "CategoricalDistribution"
+        },
+        "random_state": {
+            "type": "UnionDistribution",
+            "dists": [
+            {
+                "type": "ConstantDistribution",
+                "value": null
+            },
+            {
+                "lower": 0,
+                "upper": 10,
+                "default": 0,
+                "log": false,
+                "type": "UniformIntDistribution"
+            }
+            ]
+        },
+        "penalty": {
+            "choices": [
+            "l2",
+            "l1"
+            ],
+            "default": "l2",
+            "type": "CategoricalDistribution"
+        },
+        "multi_class": {
+            "choices": [
+            "ovr",
+            "multinomial"
+            ],
+            "default": "ovr",
+            "type": "CategoricalDistribution"
+        }
+    }
+
+To load the sampler from json:
+
+.. code-block: python
+
+    sampler_dict = json.loads(json_serialized)
+    sampler_new = Sampler(validator).from_dict(sampler_dict)
+
 
 Installation
 ------------

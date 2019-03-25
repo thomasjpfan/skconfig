@@ -42,6 +42,12 @@ class Sampler:
             self.hps[k] = load_dist_dict(v)
         self._generate_config_space()
 
+    def __repr__(self):
+        lines = []
+        for k, v in self.hps.items():
+            lines.append("{}: {}".format(k, v))
+        return "\n".join(lines)
+
     def _generate_config_space(self):
         active_params = set(self.hps)
         active_conditions = []
