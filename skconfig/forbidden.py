@@ -11,9 +11,6 @@ class ForbiddenClause(metaclass=ABCMeta):
     def is_forbidden(self, **kwargs):
         ...
 
-    def __and__(self, other):
-        return ForbiddenAnd([self, other])
-
     def __repr__(self):
         return "{self.__class__.__name__}: {self.name}, {self.value}".format(
             self=self)

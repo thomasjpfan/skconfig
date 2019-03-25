@@ -37,8 +37,8 @@ For example, we can defined a ``LogRegressionValidator`` as follows:
         n_jobs = UnionParam(NoneParam(), IntIntervalParam(lower=-1))
         
         forbiddens = [
-            ForbiddenEquals("penalty", "l1") & ForbiddenIn("solver", ["newton-cg", "sag", "lbfgs"]),
-            ForbiddenEquals("solver", "liblinear") & ForbiddenEquals("multi_class", "multinomial"),
+            ForbiddenAnd([ForbiddenEquals("penalty", "l1"), ForbiddenIn("solver", ["newton-cg", "sag", "lbfgs"])]),
+            ForbiddenAnd([ForbiddenEquals("solver", "liblinear"), ForbiddenEquals("multi_class", "multinomial")]),
         ]
 
 
