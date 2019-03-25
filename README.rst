@@ -85,7 +85,7 @@ To sample from we call `sample`:
 
 which returns a list of 5 parameter dicts to be passed to `set_params`:
 
-.. code-block:: bash
+.. code-block:: python
 
     [{'C': 0.38684515891991544,
       'dual': True,
