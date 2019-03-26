@@ -50,6 +50,9 @@ With this validator object, we can validate a set of parameters:
 
     validator = LogRegressionValidator()
 
+    # Does not raise an exception
+    validator.validate_params(multi_class="ovr")
+
     # These will raise an exception
     validator.validate_params(penalty="hello world")
     validator.validate_params(solver="liblinear", multi_class="multinomial")
