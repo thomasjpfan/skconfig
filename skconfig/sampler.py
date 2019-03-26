@@ -41,6 +41,7 @@ class Sampler:
         for k, v in p_dict.items():
             self.hps[k] = load_dist_dict(v)
         self._generate_config_space()
+        return self
 
     def __repr__(self):
         lines = []

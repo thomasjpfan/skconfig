@@ -37,8 +37,10 @@ For example, we can defined a ``LogRegressionValidator`` as follows:
         n_jobs = UnionParam(NoneParam(), IntIntervalParam(lower=-1))
         
         forbiddens = [
-            ForbiddenAnd([ForbiddenEquals("penalty", "l1"), ForbiddenIn("solver", ["newton-cg", "sag", "lbfgs"])]),
-            ForbiddenAnd([ForbiddenEquals("solver", "liblinear"), ForbiddenEquals("multi_class", "multinomial")]),
+            ForbiddenAnd([ForbiddenEquals("penalty", "l1"), 
+                          ForbiddenIn("solver", ["newton-cg", "sag", "lbfgs"])]),
+            ForbiddenAnd([ForbiddenEquals("solver", "liblinear"), 
+                          ForbiddenEquals("multi_class", "multinomial")]),
         ]
 
 
@@ -52,6 +54,9 @@ With this validator object, we can validate a set of parameters:
     validator.validate_params(penalty="hello world")
     validator.validate_params(solver="liblinear", multi_class="multinomial")
     validator.validate_params(penalty="l1", solver="sag")
+
+    params_dict = {"penalty": "l1", "solver": "sag"}
+    validator.validate_params(**params_dict)
 
 Or validate a estimator:
 
@@ -84,7 +89,7 @@ To sample from we call `sample`:
 
 .. code-block:: python
 
-    sampler.sample(5)
+    params_sample = sampler.sample(5)
 
 which returns a list of 5 parameter dicts to be passed to `set_params`:
 
@@ -121,6 +126,13 @@ which returns a list of 5 parameter dicts to be passed to `set_params`:
       'solver': 'saga',
       'random_state': 7}]
 
+To create an estimator from the first paramter item in ``params_sample``:
+
+.. code-block:: python
+
+    est = LogisticRegression(**params_sample[0])
+    # or
+    est.set_params(**params_sample[0])
 
 Serialization
 .............
